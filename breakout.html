@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Breakout</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <script src="https://code.jquery.com/jquery-2.1.0.js"></script>
+    <script>
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+
+        let lives = 3
+        var width = canvas.width;
+        var height = canvas.height;
+        let blockSize = 40;
+        var widthInBlocks = width / blockSize;
+        var heightInBlocks = height / (blockSize / 4);
+        let score = 0;
+        let numberOfBlocks = 8;
+        let intervalBetweenBlocks;
+        var animationTime = 10;
+        let timeOfAnimation = 1;
+        let deletedBlocks = [
+
+        ];
+
+        function drawBorder() {
+            ctx.fillStyle = "Gray";
+            ctx.fillRect(0, 0, width, 10);
+            ctx.fillRect(0, height - 10, width, 10);
+            ctx.fillRect(0, 0, 10, height);
+            ctx.fillRect(width - 10, 0, 10, height);
+        };
+
+        function drawScore() {
+            ctx.font = "20px Courier";
+            ctx.fillStyle = "Black";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText("Счет: " + score, 10, 10);
+        };
+
+        function drawLives() {
+            ctx.font = "20px Courier";
+            ctx.fillStyle = "Black";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText("Жизни: " + lives, 200, 10);
+        };
+
+        var gameOver = function() {
+            ctx.font = "60px Courier";
+            ctx.fillStyle = "Black";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Конец игры", width / 2, height / 2);
+            clearTimeout(timeoutId);
+        };
+
+        var winner = function() {
+            ctx.font = "60px Courier";
+            ctx.fillStyle = "Black";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Ты выиграл", width / 2, height / 2);
+            clearTimeout(timeoutId);
+        };
+
+        var circle = function(x, y, radius, fillCircle) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+            if (fillCircle) {
+                ctx.fill();
+            } else {
+                ctx.stroke();
+            }
+        };
+
+        let Block = function(col, row) {
+            this.col = col;
+            this.row = row;
+            this.del = 1;
+        };
+
+        Block.prototype.drawGreenBlock = function(color) {
+            let x = blockSize * this.col;
+            let y = (blockSize / 4) * this.row;
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, blockSize, blockSize / 4);
+        };
+
+        Block.prototype.drawSquare = function(color) {
+            let x = blockSize * this.col;
+            let y = (blockSize / 4) * this.row;
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, blockSize, blockSize / 4);
+        };
+
+        Block.prototype.drawCircle = function(color) {
+            var centerX = this.col * 5 + 5 / 2;
+            var centerY = this.row * 5 + 5 / 2;
+            ctx.fillStyle = color;
+            circle(centerX, centerY, blockSize / 6, true);
+        };
+
+
+        Block.prototype.equal = function(otherBlock) {
+            return this.col === otherBlock.col || this.row === otherBlock.row;
+        };
+
+
+        let GreenBlock = function() {
+            this.x = 8;
+            this.y = heightInBlocks - 10;
+            this.position = new Block(this.x, this.y);
+        };
+
+        GreenBlock.prototype.draw = function(color) {
+            this.position.drawGreenBlock(color);
+        };
+
+        GreenBlock.prototype.move = function(pageX) {
+            if (pageX < 0) {
+                pageX = 0
+            }
+            if (pageX > canvas.width + 200) {
+                pageX = canvas.width + 200
+            }
+            let x = pageX / 60;
+            let position = new Block(x, this.y);
+            this.position = position;
+        };
+
+        function deleteBlocks(array) {
+            for (let i = 0; i < array.length; i++) {
+                for (let y = 0; y < deletedBlocks.length; y++) {
+                    if (array[i].col * 8 === deletedBlocks[y].col &&
+                        array[i].row * 2 === deletedBlocks[y].row) {
+                        array[i].col = -10;
+                        array[i].row = -10;
+                        array[i].del = 0;
+                    }
+                }
+            }
+            return array;
+        };
+
+
+
+        function makeArrayForLotOfBlocks(y) {
+            let array = [];
+            for (let i = 0; i < numberOfBlocks; i++) {
+                array[i] = new Block(intervalBetweenBlocks, y);
+                intervalBetweenBlocks += 1.5;
+            }
+            intervalBetweenBlocks = 0.5;
+            array = deleteBlocks(array);
+            /*checkRemainingBlocks(array);*/
+            return array;
+        };
+
+        let LotOfBlocks = function() {
+
+        };
+
+        LotOfBlocks.prototype.adding = function() {
+            this.arrayOfBlocks = [
+                makeArrayForLotOfBlocks(4),
+                makeArrayForLotOfBlocks(6),
+                makeArrayForLotOfBlocks(8),
+                makeArrayForLotOfBlocks(10),
+            ]
+        };
+
+        LotOfBlocks.prototype.checkRemainingBlocks = function() {
+            for (var i = 0; i < this.arrayOfBlocks.length; i++) {
+                for (let k = 0; k < this.arrayOfBlocks[i].length; k++) {
+                    if (this.arrayOfBlocks[i][k].del === 1) {
+                        return;
+                    }
+                }
+            }
+            winner();
+        };
+
+        LotOfBlocks.prototype.draw = function() {
+            let color = "blue";
+            for (var i = 0; i < this.arrayOfBlocks.length; i++) {
+                for (let k = 0; k < this.arrayOfBlocks[i].length; k++) {
+                    let block = this.arrayOfBlocks[i][k];
+                    block.drawSquare(color);
+                }
+            }
+        };
+
+
+        let Ball = function() {
+            this.direction;
+            this.x = 33.7;
+            this.y = 40;
+            this.xSpeed = 0.4;
+            this.ySpeed = 0.4;
+            this.position = new Block(this.x, this.y);
+        };
+
+        Ball.prototype.checkDirection = function() {
+            if (this.xSpeed < 0 && this.ySpeed > 0) {
+                this.direction = "downLeft";
+            }
+            if (this.xSpeed < 0 && this.ySpeed < 0) {
+                this.direction = "upLeft";
+            }
+            if (this.xSpeed > 0 && this.ySpeed < 0) {
+                this.direction = "upRight";
+            }
+            if (this.xSpeed > 0 && this.ySpeed > 0) {
+                this.direction = "downRight";
+            }
+        };
+
+        Ball.prototype.draw = function(color) {
+            this.position.drawCircle(color);
+        };
+
+        Ball.prototype.move = function() {
+            this.x = this.x + this.xSpeed;
+            this.y = this.y + this.ySpeed;
+            let position = new Block(this.x, this.y);
+            this.position = position;
+        };
+
+        Ball.prototype.checkCollisionWithWalls = function() {
+            if (this.position.col < 1 || this.position.col > 97) {
+                this.xSpeed = -this.xSpeed;
+            }
+            if (this.position.row < 1) {
+                this.ySpeed = -this.ySpeed;
+            }
+            if (this.position.row > 100) {
+                lives--;
+
+                this.x = greenBlock.position.col * 8 + 3;
+                this.y = greenBlock.position.row * 2 - 2;
+                this.ySpeed = -this.ySpeed
+            }
+
+        };
+
+        function getRandomArbitrary(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+
+        Ball.prototype.checkCollisionWithBlock = function(Xblock, Yblock, widthOfBlock, heightInBlock) {
+            let Xball = this.position.col + 0.5;
+            let Yball = this.position.row + 0.5;
+            //столкновение с верхней границей блока
+            if (Yball > Yblock - 1 &&
+                Yball < Yblock &&
+                Xball > Xblock &&
+                Xball < Xblock + widthOfBlock) {
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                this.ySpeed = -this.ySpeed;
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                } else {
+                    let num = Math.floor(Math.random() * 2);
+                    if (num === 1) {
+                        this.xSpeed = getRandomArbitrary(0.2, 0.4);
+                    } else {
+                        this.xSpeed = -(getRandomArbitrary(0.2, 0.4));
+                    }
+                }
+                //столкновение с правой границей блока
+            }
+            if (Xball < Xblock + widthOfBlock + 0.7 &&
+                Xball > Xblock + widthOfBlock - 0.5 &&
+                Yball > Yblock &&
+                Yball < Yblock + heightInBlock) {
+                this.xSpeed = -this.xSpeed;
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+                //столкновение с левой границей блока		
+            }
+            if (
+                Xball > Xblock - 1 &&
+                Xball < Xblock &&
+                Yball > Yblock &&
+                Yball < Yblock + heightInBlock
+            ) {
+                this.xSpeed = -this.xSpeed;
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+                //столкновение с нижней границей блока	   
+            }
+            if (
+                Xball > Xblock &&
+                Xball < Xblock + widthOfBlock &&
+                Yball < Yblock + heightInBlock + 2 && //yball выше yblock
+                Yball > Yblock + heightInBlock //yball ниже yblock
+            ) {
+                this.ySpeed = -this.ySpeed;
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+                //столкновение с левым верхним углом
+            }
+            if (
+                Xball > Xblock - 1 &&
+                Xball < Xblock &&
+                Yball > Yblock - 1 &&
+                Yball < Yblock
+            ) {
+                if (this.direction === "downRight") {
+                    this.xSpeed = -this.xSpeed;
+                    this.ySpeed = -this.ySpeed;
+                }
+                if (this.direction === "downLeft") {
+                    this.ySpeed = -this.ySpeed;
+                }
+                if (this.direction === "upRight") {
+                    this.xSpeed = -this.xSpeed;
+                }
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+                //столкновение с правым верхним углом
+            }
+            if (
+                Xball < Xblock + widthOfBlock + 1 &&
+                Xball > Xblock + widthOfBlock &&
+                Yball > Yblock - 1 &&
+                Yball < Yblock
+            ) {
+                if (this.direction === "downLeft") {
+                    this.xSpeed = -this.xSpeed;
+                    this.ySpeed = -this.ySpeed;
+                }
+                if (this.direction === "downRight") {
+                    this.ySpeed = -this.ySpeed;
+                }
+                if (this.direction === "upLeft") {
+                    this.xSpeed = -this.xSpeed;
+                }
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+                //столкновение с левым нижним углом
+            }
+            if (
+                Xball > Xblock - 1 &&
+                Xball < Xblock &&
+                Yball > Yblock + heightInBlock &&
+                Yball < Yblock + heightInBlock + 1
+            ) {
+                if (this.direction === "downRight") {
+                    this.xSpeed = -this.xSpeed;
+                }
+                if (this.direction === "upLeft") {
+                    this.ySpeed = -this.ySpeed;
+                }
+                if (this.direction === "upRight") {
+                    this.xSpeed = -this.xSpeed;
+                    this.ySpeed = -this.ySpeed;
+                }
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+                //столкновение с правым нижним углом
+            }
+            if (
+                Xball < Xblock + widthOfBlock + 1 &&
+                Xball > Xblock + widthOfBlock &&
+                Yball > Yblock + heightInBlock &&
+                Yball < Yblock + heightInBlock + 1
+            ) {
+                if (this.direction === "downLeft") {
+                    this.xSpeed = -this.xSpeed;
+                }
+                if (this.direction === "upRight") {
+                    this.ySpeed = -this.ySpeed;
+                }
+                if (this.direction === "upLeft") {
+                    this.xSpeed = -this.xSpeed;
+                    this.ySpeed = -this.ySpeed;
+                }
+                let newDeletedBlock = new Block(Xblock, Yblock);
+                deletedBlocks.push(newDeletedBlock);
+                if (Xblock !== greenBlock.position.col * 8 && Yblock !== greenBlock.position.row * 2) {
+                    animationTime -= timeOfAnimation;
+                    score++;
+
+                }
+            }
+
+        };
+
+        Ball.prototype.checkCollisionWithGreenBlock = function() {
+            let Xblock = greenBlock.position.col * 8;
+            let Yblock = greenBlock.position.row * 2;
+            this.checkCollisionWithBlock(Xblock, Yblock, 8, 2);
+        };
+
+        Ball.prototype.checkCollisionWithLotOfBlocks = function() {
+            for (let i = 0; i < blocks.arrayOfBlocks.length; i++) {
+                for (let k = 0; k < blocks.arrayOfBlocks[i].length; k++) {
+                    let Xblock = blocks.arrayOfBlocks[i][k].col * 8;
+                    let Yblock = blocks.arrayOfBlocks[i][k].row * 2;
+                    this.checkCollisionWithBlock(Xblock, Yblock, 8, 2);
+                }
+            }
+        };
+
+        let blocks = new LotOfBlocks();
+        let greenBlock = new GreenBlock();
+        let ball = new Ball();
+
+        var gameLoop = function() {
+            ctx.clearRect(0, 0, width, height);
+
+            drawLives();
+            drawBorder();
+            drawScore();
+            blocks.adding();
+            blocks.checkRemainingBlocks();
+            blocks.draw();
+            greenBlock.draw("green");
+            ball.draw("red");
+            ball.move();
+            ball.checkCollisionWithWalls();
+            ball.checkCollisionWithGreenBlock();
+            ball.checkCollisionWithLotOfBlocks();
+            ball.checkDirection();
+            if (lives < 1) {
+                ctx.clearRect(200, 10, 220, 15);
+                drawLives()
+                gameOver()
+            };
+            var timeoutId = setTimeout(gameLoop, animationTime);
+        };
+        gameLoop();
+
+        /*var keyNames = {
+        37: "left", //влево
+        39: "right", //вправо
+        };*/
+
+        $("html").mousemove(function(event) {
+            greenBlock.move(event.pageX);
+        });
+    </script>
+</body>
+
+</html>
